@@ -53,3 +53,8 @@ sudo apt-get remove --purge runvpn
 
 ## CHANGELOG
 See [changelog](changelog).
+
+## Release
+Pushing a tag in the form `v<version>-<revision>` (e.g. `v0.1.0-1`) builds the
+.deb package and publishes it as a GitHub release. The tag must match the
+latest version in `changelog`.
