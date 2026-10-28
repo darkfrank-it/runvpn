@@ -1,0 +1,13 @@
+Package: runvpn
+Version: 0.1.0-1
+Architecture: all
+Maintainer: Nicola Danese <nicola.danese@e-projectsrl.it>
+Depends: openconnect, xclip, sudo, adduser
+Recommends: wl-clipboard
+Homepage: https://github.com/darkfrank-it/runvpn
+Description: Automate start|stop|restart operation for openconnect vpn
+ runvpn is a small wrapper around openconnect that starts, stops and
+ restarts a VPN connection, reading the password from the clipboard.
+ Server and username are configured in /etc/runvpn.conf.
+Priority: optional
+Section: net

@@ -1,0 +1,89 @@
+.TH RUNVPN 8 "October 2026" "runvpn 0.1.0" "System Administration"
+.SH NAME
+runvpn \- start, stop and restart an openconnect VPN connection
+.SH SYNOPSIS
+.B runvpn
+.BR start | stop | restart
+.SH DESCRIPTION
+.B runvpn
+is a small wrapper around
+.BR openconnect (8)
+that connects to the VPN server configured in
+.IR /etc/runvpn.conf ,
+reading the password from the clipboard.
+.PP
+The command must run as root: when started by a normal user it runs itself
+again through
+.BR sudo (8).
+.SH COMMANDS
+.TP
+.B start
+Read the password from the clipboard, clear the clipboard and start
+.B openconnect
+in the background.
+Fails if the clipboard is empty or if the VPN started by
+.B runvpn
+is already running.
+.TP
+.B stop
+Stop the
+.B openconnect
+process started by
+.BR runvpn ,
+waiting up to 10 seconds for it to exit.
+Other
+.B openconnect
+processes are not touched.
+.TP
+.B restart
+Stop the VPN and, if it stopped, start it again.
+The password must be copied to the clipboard again.
+.SH CLIPBOARD
+The clipboard is read as the user who invoked
+.BR sudo .
+On Wayland
+.BR wl-paste (1)
+is used when installed, otherwise
+.BR xclip (1)
+reads the X11 clipboard.
+.SH FILES
+.TP
+.I /etc/runvpn.conf
+Configuration file. Sets
+.B VPN_SERVER
+(the VPN server address) and
+.B VPN_USER
+(the VPN username).
+.TP
+.I /etc/sudoers.d/runvpn
+Lets members of the
+.B runvpn
+group run
+.B runvpn
+without a password.
+Add a user with
+.BR "adduser <user> runvpn" .
+.TP
+.I /run/runvpn.pid
+PID of the
+.B openconnect
+process started by
+.BR runvpn .
+.SH EXIT STATUS
+.B 0
+on success,
+.B 1
+on error: missing configuration, empty clipboard, VPN already running,
+VPN not stopped or wrong arguments.
+.SH EXAMPLES
+.nf
+sudo runvpn start
+sudo runvpn stop
+.fi
+.SH SEE ALSO
+.BR openconnect (8),
+.BR sudo (8),
+.BR xclip (1),
+.BR wl-paste (1)
+.SH AUTHOR
+Nicola Danese <nicola.danese@e-projectsrl.it>

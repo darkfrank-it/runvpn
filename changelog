@@ -1,0 +1,20 @@
+runvpn (0.1.0-1) unstable; urgency=medium
+
+  * Read VPN server and username from /etc/runvpn.conf.
+  * Install script in /usr/sbin instead of /usr/local/sbin.
+  * Run the desktop launcher in a terminal.
+  * Add a "Disconnect VPN" action to the desktop launcher.
+  * Read the password from the clipboard as the desktop user, with
+    wl-paste on Wayland and xclip on X11, and clear it afterwards.
+  * Track openconnect with a pid file instead of pkill.
+  * Install a sudo rule in /etc/sudoers.d for the runvpn group.
+  * Add the runvpn(8) manual page.
+  * Packaging fixes: permissions, copyright, changelog, control fields.
+
+ -- Nicola Danese <nicola.danese@e-projectsrl.it>  Wed, 28 Oct 2026 10:00:00 +0100
+
+runvpn (0.0.1-1) unstable; urgency=medium
+
+  * First release.
+
+ -- Nicola Danese <nicola.danese@e-projectsrl.it>  Wed, 15 Jun 2022 10:00:00 +0200

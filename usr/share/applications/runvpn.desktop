@@ -1,0 +1,14 @@
+[Desktop Entry]
+Version=1.0
+Name=Run VPN
+Comment=Connect to the VPN.
+Type=Application
+Icon=network-vpn
+Exec=sudo /usr/sbin/runvpn start
+Terminal=true
+Categories=Network;
+Actions=Stop;
+
+[Desktop Action Stop]
+Name=Disconnect VPN
+Exec=sudo /usr/sbin/runvpn stop

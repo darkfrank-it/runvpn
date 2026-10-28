@@ -1,0 +1,117 @@
+#!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-only
+# Copyright (C) 2022 darkfrank-it
+
+# This program is free software: you can redistribute it and/or modify it under
+# the terms of the GNU General Public License as published by the 
+# Free Software Foundation, version 3.
+
+# This program is distributed in the hope that it will be useful, 
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+# See the GNU General Public License for more details.
+
+# You should have received a copy of the GNU General Public License 
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+[ "$EUID" -eq 0 ] || exec sudo "$0" "$@"
+
+CONF=/etc/runvpn.conf
+PIDFILE=/run/runvpn.pid
+[ -r "$CONF" ] && . "$CONF"
+
+# True if the openconnect started by runvpn is still running
+running() {
+  [ -r "$PIDFILE" ] || return 1
+  PID=$(cat "$PIDFILE")
+  [ "$(cat /proc/"$PID"/comm 2>/dev/null)" = openconnect ]
+}
+
+# Run a command as the desktop user: root has no access to the user's session
+asuser() {
+  if [ -n "$SUDO_USER" ]; then
+    sudo -u "$SUDO_USER" "$@"
+  else
+    "$@"
+  fi
+}
+
+# Find the user's Wayland socket, since sudo drops WAYLAND_DISPLAY and
+# XDG_RUNTIME_DIR. Sets WL_RUNDIR and WL_DISPLAY.
+wayland() {
+  command -v wl-paste >/dev/null || return 1
+  if [ -n "$SUDO_USER" ]; then
+    WL_RUNDIR=/run/user/$(id -u "$SUDO_USER")
+  else
+    WL_RUNDIR=${XDG_RUNTIME_DIR:-/run/user/$(id -u)}
+  fi
+  for WL_DISPLAY in $WAYLAND_DISPLAY "$WL_RUNDIR"/wayland-*; do
+    WL_DISPLAY=${WL_DISPLAY##*/}
+    [ -S "$WL_RUNDIR/$WL_DISPLAY" ] && return 0
+  done
+  return 1
+}
+
+# Clipboard access: wl-clipboard on Wayland, xclip on X11
+clipboard() {
+  case "$1" in
+    read)
+      if wayland; then
+        asuser env XDG_RUNTIME_DIR="$WL_RUNDIR" WAYLAND_DISPLAY="$WL_DISPLAY" wl-paste --no-newline
+      else
+        asuser xclip -selection clipboard -o
+      fi ;;
+    clear)
+      if wayland; then
+        asuser env XDG_RUNTIME_DIR="$WL_RUNDIR" WAYLAND_DISPLAY="$WL_DISPLAY" wl-copy --clear
+      else
+        printf '' | asuser xclip -selection clipboard
+      fi ;;
+  esac
+}
+
+startme() {
+  if [ -z "$VPN_SERVER" ] || [ -z "$VPN_USER" ]; then
+    echo "VPN_SERVER and VPN_USER must be set in $CONF" >&2
+    exit 1
+  fi
+  if running; then
+    echo "VPN already running (pid $PID)" >&2
+    exit 1
+  fi
+  PASSWD=$(clipboard read 2>/dev/null)
+  if [ -z "$PASSWD" ]; then
+    echo "Clipboard is empty: copy the VPN password first" >&2
+    exit 1
+  fi
+  # Don't leave the password in the clipboard
+  clipboard clear
+  echo `date`
+  printf '%s' "$PASSWD" | openconnect -b --pid-file="$PIDFILE" "$VPN_SERVER" -u "$VPN_USER" --passwd-on-stdin
+  read -n1 -p "Press any key to exit."
+}
+
+stopme() {
+  if running; then
+    kill "$PID"
+    # Wait up to 10s for openconnect to restore the network and exit
+    for i in $(seq 50); do
+      kill -0 "$PID" 2>/dev/null || break
+      sleep 0.2
+    done
+    if kill -0 "$PID" 2>/dev/null; then
+      echo "openconnect (pid $PID) did not stop" >&2
+      return 1
+    fi
+  fi
+  rm -f "$PIDFILE"
+}
+
+case "$1" in
+    start)   startme ;;
+    stop)    stopme ;;
+    restart) stopme && startme ;;
+    *) echo "usage: $0 start|stop|restart" >&2
+       exit 1
+       ;;
+esac

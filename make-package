@@ -1,0 +1,31 @@
+#!/bin/bash
+# file name make-package
+# Make .deb package
+
+set -e
+
+if [ $# -ne 2 ]; then
+  echo "please specify version and revision" >&2
+  exit 1
+fi
+
+VERSION="$1-$2"
+DIR="runvpn_${VERSION}_all"
+
+rm -rf "$DIR"
+mkdir "$DIR"
+cp -r DEBIAN etc usr "$DIR"
+
+sed -i "s/^Version:.*/Version: $VERSION/" "$DIR/DEBIAN/control"
+gzip -9n -c changelog > "$DIR/usr/share/doc/runvpn/changelog.Debian.gz"
+mkdir -p "$DIR/usr/share/man/man8"
+gzip -9n -c runvpn.8 > "$DIR/usr/share/man/man8/runvpn.8.gz"
+
+find "$DIR" -type d -exec chmod 755 {} +
+find "$DIR" -type f -exec chmod 644 {} +
+chmod 755 "$DIR/usr/sbin/runvpn" "$DIR/DEBIAN/postinst" "$DIR/DEBIAN/postrm"
+chmod 440 "$DIR/etc/sudoers.d/runvpn"
+
+dpkg-deb --build --root-owner-group "$DIR"
+
+rm -rf "$DIR"
